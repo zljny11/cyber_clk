@@ -62,9 +62,14 @@
 
 ###  Screenshots / 界面预览
 
-|      Main Interface      |         BGM Panel         |   Background Switching    |
-| :----------------------: | :-----------------------: | :-----------------------: |
-| ![Main](screenshot1.png) | ![Stats](screenshot2.png) | ![Pause](screenshot3.png) |
+#### Main Interface
+![Main](screenshot1.png)
+
+#### BGM Panel
+![Stats](screenshot2.png)
+
+#### Background Switching
+![Pause](screenshot3.png)
 
 ---
 
