@@ -4,7 +4,7 @@
 
 > "Wake the f**k up, Samurai. We have a task to burn."
 
-![License](https://img.shields.io/badge/license-MIT-yellow.svg) ![Version](https://img.shields.io/badge/version-3.4-00f0ff.svg) ![Style](https://img.shields.io/badge/style-Cyberpunk_2077-ff003c.svg)
+![License](https://img.shields.io/badge/license-MIT-yellow.svg) ![Style](https://img.shields.io/badge/style-Cyberpunk_2077-ff003c.svg) ![JavaScript](https://img.shields.io/badge/js-JavaScript-blue.svg) ![HTML](https://img.shields.io/badge/html-HTML-orange.svg) ![CSS](https://img.shields.io/badge/css-CSS-264de4.svg) ![Web Worker](https://img.shields.io/badge/web%20worker-Enabled-7CFC00.svg)
 
 <a name="chinese"></a>
 
