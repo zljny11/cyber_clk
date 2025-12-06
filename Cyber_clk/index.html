@@ -555,6 +555,36 @@
             /* 把它挤到最下面 */
             padding-top: 20px;
         }
+
+        /* === 角落全屏按钮 === */
+        .fullscreen-corner-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #333;
+            color: #666;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 100;
+            /* 保证在最上层 */
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* 切角设计，更有科技感 */
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+        }
+
+        .fullscreen-corner-btn:hover {
+            border-color: var(--cp-blue);
+            color: var(--cp-blue);
+            background: rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+            transform: scale(1.1);
+        }
     </style>
 </head>
 
@@ -1366,6 +1396,35 @@
         }
 
         // ==========================================
+        // Z. FULLSCREEN TOGGLE (图标版)
+        // ==========================================
+        function toggleFullScreen() {
+            const btn = document.getElementById('btn-full');
+
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log(err);
+                });
+                btn.innerHTML = "✕"; // 退出图标 (叉号)
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+                btn.innerHTML = "⛶"; // 进入图标
+            }
+        }
+
+        document.addEventListener('fullscreenchange', () => {
+            const btn = document.getElementById('btn-full');
+            // 如果由于按 ESC 退出，图标也要变回来
+            if (!document.fullscreenElement) {
+                btn.innerHTML = "⛶";
+            } else {
+                btn.innerHTML = "✕";
+            }
+        });
+
+        // ==========================================
         // THREE.JS PARTICLES
         // ==========================================
         function initThree() {
@@ -1404,6 +1463,7 @@
             });
         }
     </script>
+    <button id="btn-full" class="fullscreen-corner-btn" onclick="toggleFullScreen()">⛶</button>
 </body>
 
 </html>
