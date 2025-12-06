@@ -30,7 +30,8 @@
 ---
 
 ### 快速使用
-完整网页版：点击https://zljny11.github.io/cyber_clk/（推荐chrome打开）
+完整网页版：点击https://zljny11.github.io/cyber_clk/
+（推荐chrome打开）
 
 侧边栏插件：clone CyberSidePanel到本地 关联google extension即可使用（功能略受限）
 
