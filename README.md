@@ -15,6 +15,20 @@
 
 这款时钟内置精美赛博风壁纸和专属学习用电台，风格各异，支持音量调节，也欢迎你自己上传任何你喜欢的音乐和壁纸！
 
+
+###  Screenshots / 界面预览
+
+#### Main Interface
+![Main](screenshot1.png)
+
+#### BGM Panel
+![Stats](screenshot2.png)
+
+#### Background Switching
+![Pause](screenshot3.png)
+
+---
+
 ### 快速使用
 完整网页版：点击https://zljny11.github.io/cyber_clk/（推荐chrome打开）
 
@@ -60,18 +74,6 @@
 
 ---
 
-###  Screenshots / 界面预览
-
-#### Main Interface
-![Main](screenshot1.png)
-
-#### BGM Panel
-![Stats](screenshot2.png)
-
-#### Background Switching
-![Pause](screenshot3.png)
-
----
 
 ## 觉得做的太乱了太垃圾了欢迎来喷！！！我但凡学习效率高点也不会自娱自乐写这玩意!!
 
