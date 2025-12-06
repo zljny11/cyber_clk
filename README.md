@@ -64,7 +64,7 @@
 
 |      Main Interface      |         BGM Panel         |   Background Switching    |
 | :----------------------: | :-----------------------: | :-----------------------: |
-| ![Main](screenshot1.jpg) | ![Stats](screenshot2.jpg) | ![Pause](screenshot3.jpg) |
+| ![Main](screenshot1.png) | ![Stats](screenshot2.png) | ![Pause](screenshot3.png) |
 
 ---
 
