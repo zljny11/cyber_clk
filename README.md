@@ -9,11 +9,13 @@
 <a name="chinese"></a>
 
 ### 说明
-因为嫌弃市面上的番茄钟太无聊，所以我搓了这个***赛博朋克风专注时钟***
+觉得市面上的番茄钟太无聊，所以我搓了这个***赛博朋克风专注时钟***
 
-界面致敬《赛博朋克 2077》，带防摸鱼机制，而且用了 Web Worker 多线程，就算你切到后台去工作，倒计时也不会卡顿!
+界面致敬《赛博朋克 2077》，带防摸鱼机制，而且用了 Web Worker 多线程，就算你切到后台去工作，倒计时也不会卡顿
 
-快速使用：点击https://zljny11.github.io/cyber_clk/ 或者 https://boisterous-peony-cbac92.netlify.app/（推荐chrome打开）
+快速使用：点击https://zljny11.github.io/cyber_clk/ （推荐chrome打开）
+
+侧边栏版本：clone CyberSidePanel都本地，加入google的extension即可
 
 #### ✨ 主要功能
 这界面很酷：CRT 扫描线、故障风字体、粒子背景，还有那味儿很冲的“入侵协议” UI!
