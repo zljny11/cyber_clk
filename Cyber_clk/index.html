@@ -432,6 +432,129 @@
         #file-inputs {
             display: none;
         }
+
+        /* === 新增：电台样式 === */
+        .station-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .station-btn {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #333;
+            color: #666;
+            padding: 15px 10px;
+            cursor: pointer;
+            font-family: var(--font-main);
+            text-transform: uppercase;
+            transition: 0.3s;
+            font-size: 12px;
+            letter-spacing: 1px;
+        }
+
+        .station-btn:hover {
+            border-color: var(--cp-blue);
+            color: var(--cp-blue);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+        }
+
+        .station-btn.active-station {
+            background: var(--cp-yellow);
+            color: black;
+            border-color: var(--cp-yellow);
+            box-shadow: 0 0 15px var(--cp-yellow);
+            font-weight: bold;
+        }
+
+        /* 赛博朋克风格的滑动条 */
+        .volume-control label {
+            display: block;
+            color: var(--cp-blue);
+            font-size: 10px;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+        }
+
+        .cyber-range {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            background: #333;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity .2s;
+        }
+
+        .cyber-range::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            background: var(--cp-red);
+            cursor: pointer;
+            border: 2px solid black;
+        }
+
+        .cyber-range:hover {
+            opacity: 1;
+        }
+
+        /* === 新增：壁纸面板样式 === */
+        .bg-selector-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            /* 如果图片太多，允许滚动 */
+        }
+
+        .bg-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            /* 两列显示 */
+            gap: 15px;
+            padding-bottom: 20px;
+            border-bottom: 1px dashed #333;
+            margin-bottom: 20px;
+        }
+
+        .bg-thumb {
+            aspect-ratio: 16 / 9;
+            /* 强制宽屏比例作为缩略图 */
+            background-size: cover;
+            background-position: center;
+            border: 2px solid #333;
+            cursor: pointer;
+            transition: 0.3s all ease;
+            opacity: 0.6;
+            filter: grayscale(0.5);
+            /* 默认稍微灰一点 */
+        }
+
+        .bg-thumb:hover {
+            opacity: 1;
+            filter: grayscale(0);
+            border-color: var(--cp-blue);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+        }
+
+        /* 选中状态 */
+        .bg-thumb.active-bg {
+            opacity: 1;
+            filter: grayscale(0);
+            border-color: var(--cp-yellow);
+            box-shadow: 0 0 15px var(--cp-yellow);
+            transform: scale(1.02);
+            /* 选中时稍微放大一点点 */
+        }
+
+        .custom-upload-section {
+            margin-top: auto;
+            /* 把它挤到最下面 */
+            padding-top: 20px;
+        }
     </style>
 </head>
 
@@ -444,9 +567,10 @@
     <div class="cyber-panel" id="main-panel">
         <div class="top-nav">
             <button class="nav-btn" onclick="document.getElementById('music-input').click()">🎵 BGM</button>
-            <button class="nav-btn" onclick="document.getElementById('bg-input').click()">🖼️ BG</button>
+            <button class="nav-btn" id="btn-bg" onclick="togglePanel('bg')">🖼️ BG</button>
             <button class="nav-btn" id="btn-sys" onclick="togglePanel('settings')">⚙️ SYS</button>
             <button class="nav-btn" id="btn-stats" onclick="togglePanel('stats');">📊 DAT</button>
+            <button class="nav-btn" id="btn-radio" onclick="togglePanel('radio')">📡 RADIO</button>
         </div>
 
         <div style="display:none;" id="file-inputs">
@@ -466,7 +590,7 @@
 
             <input type="text" class="cyber-input" id="task-input" placeholder=">> 设定入侵目标..." autocomplete="off">
 
-            <button class="glitch-btn" id="action-btn" onclick="handleMainAction()">开始入侵</button>
+            <button class="glitch-btn" id="action-btn" onclick="handleMainAction()">开始入侵...</button>
             <button class="pause-btn" id="pause-btn" onclick="requestPause()" style="display:none;">// 申请挂起</button>
         </div>
     </div>
@@ -543,6 +667,72 @@
         </div>
     </div>
 
+    <div class="slide-panel" id="radio-panel">
+        <div class="panel-header">
+            <span class="panel-title">NEURAL FREQUENCY</span>
+            <div style="font-size:10px; color:var(--cp-green)" id="radio-status">OFFLINE</div>
+        </div>
+
+        <div class="radio-interface">
+            <div class="station-grid">
+                <button class="station-btn" onclick="switchStation(0)">🌧️ Rain</button>
+                <button class="station-btn" onclick="switchStation(1)">🎹 Jazz</button>
+                <button class="station-btn" onclick="switchStation(2)">🌃 Synth</button>
+                <button class="station-btn" onclick="switchStation(3)">🎧 HipHop</button>
+                <button class="station-btn" onclick="switchStation(4)">🌊 White</button>
+            </div>
+
+            <div class="volume-control">
+                <label>GAIN LEVEL</label>
+                <input type="range" class="cyber-range" min="0" max="100" value="50"
+                    oninput="setRadioVolume(this.value)">
+            </div>
+
+            <button class="glitch-btn" id="cut-signal-btn" onclick="stopRadio()"
+                style="margin-top:20px; font-size:14px; background:#333; color:#888;">// CUT SIGNAL</button>
+        </div>
+    </div>
+
+    <div class="slide-panel" id="bg-panel">
+        <div class="panel-header">
+            <span class="panel-title">VISUAL DATABASE</span>
+        </div>
+
+        <div class="bg-selector-container">
+            <div class="bg-grid">
+                <button class="bg-thumb active-bg" style="background-image: url('101454734.jpg')"
+                    data-src="101454734.jpg" onclick="switchBackground(this)">
+                </button>
+
+                <button class="bg-thumb" style="background-image: url('bg/cp1.jpg')" data-src="bg/cp1.jpg"
+                    onclick="switchBackground(this)">
+                </button>
+
+                <button class="bg-thumb" style="background-image: url('bg/cp2.jpg')" data-src="bg/cp2.jpg"
+                    onclick="switchBackground(this)">
+                </button>
+
+                <button class="bg-thumb" style="background-image: url('bg/cp3.png')" data-src="bg/cp3.png"
+                    onclick="switchBackground(this)">
+                </button>
+
+                <button class="bg-thumb" style="background-image: url('bg/cp4.jpg')" data-src="bg/cp4.jpg"
+                    onclick="switchBackground(this)">
+                </button>
+            </div>
+
+            <div class="custom-upload-section">
+                <div style="font-size: 12px; color: #666; margin-bottom: 10px;">Wait a minute, I'll use my own
+                </div>
+                <button class="glitch-btn" onclick="document.getElementById('bg-input').click()"
+                    style="font-size:14px; padding: 15px;">
+                    // UPLOAD LOCAL FILE
+                </button>
+            </div>
+        </div>
+    </div>
+    </div>
+
     <audio id="bgm-player" loop></audio>
 
     <script>
@@ -569,7 +759,7 @@
             'thinker': { icon: '🧠', title: '赛博思想家: 累计专注15小时' },
             'resilient': { icon: '🛡️', title: '百蛰不挠: 中断后仍完成任务' },
             'durable': { icon: '🔋', title: '持久还得看你: 连续7天使用' },
-            'highroller': { icon: '💎', title: '高分玩家: 最近10次均分>4' }
+            'highroller': { icon: '💎', title: '高（分）玩（家）: 最近10次均分>4' }
         };
 
         let appState = {
@@ -956,6 +1146,41 @@
             }
         }
 
+        // ==========================================
+        // Y. BACKGROUND SWITCHER (新增模块)
+        // ==========================================
+        function switchBackground(element) {
+            // 1. 获取点击按钮上记录的图片路径 (data-src 属性)
+            const newBgSrc = element.getAttribute('data-src');
+
+            // 2. 设置给背景层
+            // 使用线性渐变叠加，确保图片不会太亮，保持文字可读性（延续了你原有的风格）
+            // 如果你想要原图更亮一点，可以调整这里的 rgba 值
+            document.getElementById('bg-layer').style.backgroundImage = `url('${newBgSrc}')`;
+
+            // 3. 更新视觉状态（高亮选中的缩略图）
+            // 先移除所有缩略图的高亮
+            document.querySelectorAll('.bg-thumb').forEach(btn => {
+                btn.classList.remove('active-bg');
+            });
+            // 再给自己加上高亮
+            element.classList.add('active-bg');
+        }
+
+        // 修改原有的 loadBackground 函数，加上一点点细节
+        const originalLoadBackground = loadBackground; // 保存原函数引用
+        loadBackground = function (input) {
+            // 调用原有的上传逻辑
+            originalLoadBackground(input);
+
+            // 新增：上传自定义图片后，取消所有内置缩略图的高亮状态，因为现在用的是自定义的
+            if (input.files && input.files[0]) {
+                document.querySelectorAll('.bg-thumb').forEach(btn => {
+                    btn.classList.remove('active-bg');
+                });
+            }
+        }
+
         function loadMusic(input) {
             if (input.files && input.files[0]) {
                 const url = URL.createObjectURL(input.files[0]);
@@ -1065,6 +1290,79 @@
             localStorage.setItem('cp_config', JSON.stringify(config));
             closeAllPanels();
             if (!appState.active) resetUI();
+        }
+
+        // ==========================================
+        // X. RADIO SYSTEM 
+        const STATIONS = [
+            { name: "ACID RAIN", src: "./music/rain.m4a" },      // 雨声
+            { name: "MIDNIGHT JAZZ", src: "./music/jazz.m4a" },   // 爵士
+            { name: "NEON SYNTH", src: "./music/synth.m4a" },     // Synthwave
+            { name: "STREET HIPHOP", src: "./music/hiphop.m4a" },  // Hiphop
+            { name: "STATIC NOISE", src: "./music/white.m4a" }     // 白噪音
+        ];
+
+        let radioPlayer = new Audio();
+        radioPlayer.loop = true; // 电台循环播放
+        let currentStationIndex = -1;
+
+        function switchStation(index) {
+            // 1. 更新视觉状态
+            const btns = document.querySelectorAll('.station-btn');
+            btns.forEach((btn, i) => {
+                if (i === index) btn.classList.add('active-station');
+                else btn.classList.remove('active-station');
+            });
+
+            // 2. 如果点击的是同一个，不做动作（或者你可以选择暂停，这里设为不做动作）
+            if (currentStationIndex === index && !radioPlayer.paused) return;
+
+            // 3. 切换音频
+            currentStationIndex = index;
+            const station = STATIONS[index];
+
+            // 如果用户上传了BGM，为了防止吵杂，可以选择暂停原有的BGM（可选）
+            // document.getElementById('bgm-player').pause(); 
+
+            radioPlayer.src = station.src;
+            radioPlayer.play().then(() => {
+                updateRadioStatus(`RECEIVING: ${station.name}`, true);
+                const cutBtn = document.getElementById("cut-signal-btn");
+                if (cutBtn) {
+                    cutBtn.style.background = "var(--cp-yellow)";
+                    cutBtn.style.color = "black";
+                    cutBtn.style.boxShadow = "0 0 10px var(--cp-yellow)";
+                }
+            }).catch(e => {
+                console.error("无法播放，请检查文件路径", e);
+                updateRadioStatus("SIGNAL LOST (NO FILE)", false);
+            });
+        }
+
+        function stopRadio() {
+            radioPlayer.pause();
+            radioPlayer.currentTime = 0;
+            currentStationIndex = -1;
+
+            document.querySelectorAll('.station-btn').forEach(b => b.classList.remove('active-station'));
+            updateRadioStatus("OFFLINE", false);
+            const cutBtn = document.getElementById("cut-signal-btn");
+            if (cutBtn) {
+                cutBtn.style.background = "#333";
+                cutBtn.style.color = "#888";
+                cutBtn.style.boxShadow = "none";
+            }
+        }
+
+        function setRadioVolume(val) {
+            radioPlayer.volume = val / 100;
+        }
+
+        function updateRadioStatus(text, isActive) {
+            const el = document.getElementById('radio-status');
+            el.innerText = text;
+            el.style.color = isActive ? "var(--cp-yellow)" : "var(--cp-green)";
+            el.style.textShadow = isActive ? "0 0 5px var(--cp-yellow)" : "none";
         }
 
         // ==========================================
