@@ -433,7 +433,7 @@
             display: none;
         }
 
-        /* === 新增：电台样式 === */
+        /* === 电台样式 === */
         .station-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -501,7 +501,7 @@
             opacity: 1;
         }
 
-        /* === 新增：壁纸面板样式 === */
+        /* === 壁纸面板样式 === */
         .bg-selector-container {
             flex: 1;
             display: flex;
@@ -603,8 +603,10 @@
             <button class="nav-btn" id="btn-radio" onclick="togglePanel('radio')">📡 RADIO</button>
         </div>
 
+
         <div style="display:none;" id="file-inputs">
-            <input type="file" id="bg-input" accept="image/*" onchange="loadBackground(this)">
+            <input type="file" id="bg-input-gallery" accept="image/*" onchange="handleFileUpload(this, 'image', false)">
+            <input type="file" id="bg-input-apply" accept="image/*" onchange="handleFileUpload(this, 'image', true)">
             <input type="file" id="music-input" accept="audio/*" onchange="loadMusic(this)">
         </div>
 
@@ -663,6 +665,7 @@
             <label style="color:var(--cp-blue); font-size:12px; display:block; margin-bottom:10px;">冷却时长 (MIN)</label>
             <input type="number" class="cyber-input" id="cfg-break" value="5">
             <button class="glitch-btn" onclick="saveSettings()" style="font-size:16px; margin-top:20px;">保存配置</button>
+            <button class="purge-btn" onclick="CyberDB.deleteDB()">⚠️ 重置数据库 (修复卡死)</button>
         </div>
     </div>
 
@@ -718,6 +721,17 @@
                     oninput="setRadioVolume(this.value)">
             </div>
 
+            <div style="margin-top: 25px; border-top: 1px dashed #333; padding-top: 15px;">
+                <label style="color:var(--cp-yellow); font-size:12px;">LOCAL STORAGE (本地存储)</label>
+                <div id="local-audio-list" style="margin-top:10px; max-height: 150px; overflow-y: auto;">
+                    <div style="color:#666; font-size:10px;">暂无上传音乐...</div>
+                </div>
+                <button class="glitch-btn" onclick="document.getElementById('music-input').click()"
+                    style="font-size:12px; padding:10px; margin-top:10px; background:var(--cp-yellow); color:black; font-weight:bold; border:none; box-shadow: 0 0 10px var(--cp-yellow);">
+                    + UPLOAD NEW TRACK
+                </button>
+            </div>
+
             <button class="glitch-btn" id="cut-signal-btn" onclick="stopRadio()"
                 style="margin-top:20px; font-size:14px; background:#333; color:#888;">// CUT SIGNAL</button>
         </div>
@@ -730,6 +744,17 @@
 
         <div class="bg-selector-container">
             <div class="bg-grid">
+                <div style="font-size: 12px; color: var(--cp-yellow); margin: 20px 0 10px 0;">LOCAL GALLERY</div>
+                <div class="bg-grid" id="local-bg-list">
+                </div>
+
+                <div class="custom-upload-section">
+                    <button class="glitch-btn" onclick="document.getElementById('bg-input-gallery').click()"
+                        style="font-size:14px; padding: 15px; border: 1px dashed var(--cp-yellow); background: transparent; color: var(--cp-yellow);">
+                        // UPLOAD TO GALLERY
+                    </button>
+                </div>
+
                 <button class="bg-thumb active-bg" style="background-image: url('101454734.jpg')"
                     data-src="101454734.jpg" onclick="switchBackground(this)">
                 </button>
@@ -752,9 +777,8 @@
             </div>
 
             <div class="custom-upload-section">
-                <div style="font-size: 12px; color: #666; margin-bottom: 10px;">Wait a minute, I'll use my own
-                </div>
-                <button class="glitch-btn" onclick="document.getElementById('bg-input').click()"
+                <div style="font-size: 12px; color: #666; margin-bottom: 10px;">Wait a minute, I'll use my own</div>
+                <button class="glitch-btn" onclick="document.getElementById('bg-input-apply').click()"
                     style="font-size:14px; padding: 15px;">
                     // UPLOAD LOCAL FILE
                 </button>
@@ -766,6 +790,106 @@
     <audio id="bgm-player" loop></audio>
 
     <script>
+        // === CYBER DATABASE (IndexedDB DAO Layer) ===
+        const CyberDB = {
+            dbName: 'CyberPunkSystem',
+            storeName: 'media_warehouse',
+            version: 1,
+
+            open: function () {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(this.dbName, this.version);
+
+                    request.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+                        // 创建仓库，如果不存在
+                        if (!db.objectStoreNames.contains(this.storeName)) {
+                            db.createObjectStore(this.storeName, { keyPath: 'id', autoIncrement: true });
+                        }
+                    };
+
+                    request.onsuccess = (e) => resolve(e.target.result);
+                    request.onerror = (e) => reject(e);
+                });
+            },
+
+            // 保存媒体
+            addMedia: async function (type, file) {
+                const db = await this.open();
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(this.storeName, 'readwrite');
+                    const store = tx.objectStore(this.storeName);
+
+                    tx.oncomplete = () => db.close(); // 事务结束立即关闭连接，防止死锁
+
+                    const entity = {
+                        type: type,
+                        name: file.name,
+                        created: new Date(),
+                        blob: file
+                    };
+
+                    const req = store.add(entity);
+                    req.onsuccess = () => resolve('Saved');
+                    req.onerror = (e) => reject(e);
+                });
+            },
+
+            // 获取文件
+            getAllByType: async function (targetType) {
+                const db = await this.open();
+                return new Promise((resolve) => {
+                    const tx = db.transaction(this.storeName, 'readonly');
+                    const store = tx.objectStore(this.storeName);
+
+                    tx.oncomplete = () => db.close();
+
+                    const request = store.getAll();
+                    request.onsuccess = () => {
+                        const allItems = request.result;
+                        // 简单的内存过滤，因为数据量不大
+                        const filtered = allItems.filter(item => item.type === targetType);
+                        resolve(filtered);
+                    };
+                });
+            },
+
+            // 删除单个文件
+            deleteMedia: async function (id) {
+                const db = await this.open();
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(this.storeName, 'readwrite');
+                    const store = tx.objectStore(this.storeName);
+
+                    tx.oncomplete = () => db.close();
+
+                    store.delete(id).onsuccess = () => resolve();
+                });
+            },
+
+            // === 修复后的重制数据库功能 ===
+            deleteDB: function () {
+                if (confirm("⚠️ 警告：这将清空所有本地上传的壁纸和音乐。\n\n如果点击确定后没有反应，请检查是否在其他标签页也打开了此网站。\n确定要执行吗？")) {
+
+                    const req = indexedDB.deleteDatabase(this.dbName);
+
+                    req.onsuccess = () => {
+                        alert(">> SYSTEM PURGED: 数据库已彻底重置，页面即将刷新。");
+                        location.reload();
+                    };
+
+                    req.onerror = (e) => {
+                        console.error("Delete Error:", e);
+                        alert(">> ERROR: 重置失败，请尝试关闭浏览器重新打开。");
+                    };
+
+                    // 处理数据库被占用的情况（最常见的问题）
+                    req.onblocked = () => {
+                        alert(">> BUSY SIGNAL: 数据库正被占用。\n请关闭当前浏览器中所有打开了这个网页的标签页，然后只保留一个页面刷新重试。");
+                    };
+                }
+            }
+        };
         // ==========================================
         // 0. WORKER & DATA DEFINITION
         // ==========================================
@@ -810,10 +934,15 @@
         // ==========================================
         // 1. INITIALIZATION & EVENTS
         // ==========================================
-        window.onload = () => {
+        window.onload = async () => {
             initThree();
             renderAchievements();
 
+            renderLocalAudio();
+            renderLocalBg();
+
+            // 移除旧版加载逻辑，避免报错
+            // try { ... } catch (e) { ... }
             document.addEventListener('click', (e) => {
                 const isClickInsidePanel = e.target.closest('.slide-panel');
                 const isClickButton = e.target.closest('.nav-btn');
@@ -1168,17 +1297,162 @@
             osc.stop(ctx.currentTime + 0.5);
         }
 
-        function loadBackground(input) {
+        // === 通用上传处理 ===
+        // 增加第三个参数 autoApply，默认为 false
+        async function handleFileUpload(input, type, autoApply = false) {
             if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => document.getElementById('bg-layer').style.backgroundImage = `url(${e.target.result})`;
-                reader.readAsDataURL(input.files[0]);
+                const file = input.files[0];
+                try {
+                    // 1. 保存到数据库
+                    await CyberDB.addMedia(type, file);
+
+                    // 2. 根据类型分别处理
+                    if (type === 'audio') {
+                        renderLocalAudio();
+                        alert(">> AUDIO DATABANK UPDATED");
+                    }
+                    else {
+                        // === 壁纸处理逻辑 ===
+
+                        // A. 无论如何先刷新列表，确保新图出现在库里
+                        await renderLocalBg();
+
+                        // B. 只有 autoApply 为 true 时，才执行换壁纸的操作
+                        if (autoApply) {
+                            const url = URL.createObjectURL(file);
+                            document.getElementById('bg-layer').style.backgroundImage = `url('${url}')`;
+
+                            // 高亮最后一张图
+                            document.querySelectorAll('.bg-thumb').forEach(b => b.classList.remove('active-bg'));
+                            const allThumbs = document.querySelectorAll('#local-bg-list .bg-thumb');
+                            if (allThumbs.length > 0) {
+                                allThumbs[allThumbs.length - 1].classList.add('active-bg');
+                            }
+                        } else {
+                            // 如果不自动应用，为了提示用户成功，可以稍微闪烁一下列表或者给个轻微提示（可选）
+                            // 这里我们选择静默更新，或者你可以加个 console.log
+                            console.log(">> Image added to gallery silently.");
+                        }
+                    }
+
+                } catch (e) {
+                    console.error(e);
+                    alert(">> SYSTEM ERROR: 数据写入失败");
+                }
+                // 清空 input
+                input.value = '';
             }
         }
 
-        // ==========================================
-        // Y. BACKGROUND SWITCHER (新增模块)
-        // ==========================================
+        // === 渲染音频列表 (已修复音量和停止逻辑) ===
+        async function renderLocalAudio() {
+            const list = await CyberDB.getAllByType('audio');
+            const container = document.getElementById('local-audio-list');
+            container.innerHTML = '';
+
+            if (list.length === 0) {
+                container.innerHTML = '<div style="color:#666; font-size:10px;">NO DATA IN DRIVE</div>';
+                return;
+            }
+
+            list.forEach(item => {
+                const row = document.createElement('div');
+                row.style.cssText = "display:flex; justify-content:space-between; margin-bottom:5px; align-items:center; background:rgba(255,255,255,0.05); padding:5px;";
+
+                const playBtn = document.createElement('span');
+                playBtn.innerText = `▶ ${item.name}`;
+                playBtn.style.cssText = "cursor:pointer; font-size:12px; color:#ccc; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; max-width:180px;";
+
+                playBtn.onclick = () => {
+                    const url = URL.createObjectURL(item.blob);
+                    const bgm = document.getElementById('bgm-player');
+
+                    // 1. 先把电台停了但不调用 stopRadio() （因为那会把 UI 全重置了)
+                    radioPlayer.pause();
+                    document.querySelectorAll('.station-btn').forEach(b => b.classList.remove('active-station'));
+
+                    // 2. 设置源并播放
+                    bgm.src = url;
+
+                    // 3. 立即同步当前的音量滑块值
+                    const volInput = document.querySelector('.cyber-range');
+                    if (volInput) {
+                        bgm.volume = volInput.value / 100;
+                    }
+
+                    bgm.play();
+
+                    // 4. 更新面板状态 (让 CUT SIGNAL 按钮亮起来，显示当前歌名)
+                    updateRadioStatus(`LOCAL: ${item.name}`, true);
+                    const cutBtn = document.getElementById("cut-signal-btn");
+                    if (cutBtn) {
+                        cutBtn.style.background = "var(--cp-yellow)";
+                        cutBtn.style.color = "black";
+                        cutBtn.style.boxShadow = "0 0 10px var(--cp-yellow)";
+                    }
+                };
+
+                const delBtn = document.createElement('span');
+                delBtn.innerText = "✕";
+                delBtn.style.cssText = "cursor:pointer; color:var(--cp-red); padding:0 5px; font-weight:bold;";
+                delBtn.onclick = async (e) => {
+                    e.stopPropagation();
+                    if (confirm("DELETE FILE?")) {
+                        await CyberDB.deleteMedia(item.id);
+                        renderLocalAudio();
+                    }
+                };
+
+                row.appendChild(playBtn);
+                row.appendChild(delBtn);
+                container.appendChild(row);
+            });
+        }
+        // === 渲染背景列表 ===
+        async function renderLocalBg() {
+            const list = await CyberDB.getAllByType('image');
+            const container = document.getElementById('local-bg-list');
+            container.innerHTML = '';
+
+            list.forEach(item => {
+                const url = URL.createObjectURL(item.blob); // 生成预览图
+
+                const wrapper = document.createElement('div');
+                wrapper.style.position = 'relative';
+
+                const btn = document.createElement('button');
+                btn.className = 'bg-thumb';
+                btn.style.backgroundImage = `url('${url}')`;
+                btn.style.width = '100%';
+                btn.onclick = () => {
+                    document.getElementById('bg-layer').style.backgroundImage = `url('${url}')`;
+                    // 高亮逻辑
+                    document.querySelectorAll('.bg-thumb').forEach(b => b.classList.remove('active-bg'));
+                    btn.classList.add('active-bg');
+                };
+
+                // 删除按钮悬浮在右上角
+                const delBtn = document.createElement('div');
+                delBtn.innerText = "✕";
+                delBtn.style.cssText = "position:absolute; top:0; right:0; background:var(--cp-red); color:black; font-size:10px; width:20px; height:20px; display:flex; justify-content:center; align-items:center; cursor:pointer;";
+                delBtn.onclick = async (e) => {
+                    e.stopPropagation();
+                    if (confirm("DELETE IMG?")) {
+                        await CyberDB.deleteMedia(item.id);
+                        renderLocalBg();
+                    }
+                };
+
+                wrapper.appendChild(btn);
+                wrapper.appendChild(delBtn);
+                container.appendChild(wrapper);
+            });
+        }
+
+        // === 绑定到 Input 事件 ===
+        // 重新定义这两个函数，让 input onchange 调用我们的新逻辑
+        window.loadMusic = function (input) { handleFileUpload(input, 'audio'); };
+        window.loadBackground = function (input) { handleFileUpload(input, 'image'); };
         function switchBackground(element) {
             // 1. 获取点击按钮上记录的图片路径 (data-src 属性)
             const newBgSrc = element.getAttribute('data-src');
@@ -1197,27 +1471,6 @@
             element.classList.add('active-bg');
         }
 
-        // 修改原有的 loadBackground 函数，加上一点点细节
-        const originalLoadBackground = loadBackground; // 保存原函数引用
-        loadBackground = function (input) {
-            // 调用原有的上传逻辑
-            originalLoadBackground(input);
-
-            // 新增：上传自定义图片后，取消所有内置缩略图的高亮状态，因为现在用的是自定义的
-            if (input.files && input.files[0]) {
-                document.querySelectorAll('.bg-thumb').forEach(btn => {
-                    btn.classList.remove('active-bg');
-                });
-            }
-        }
-
-        function loadMusic(input) {
-            if (input.files && input.files[0]) {
-                const url = URL.createObjectURL(input.files[0]);
-                document.getElementById('bgm-player').src = url;
-                alert("BGM 已加载");
-            }
-        }
 
         function setRating(v) {
             appState.tempRating = v;
@@ -1370,12 +1623,21 @@
         }
 
         function stopRadio() {
+            // 1. 停止电台
             radioPlayer.pause();
             radioPlayer.currentTime = 0;
             currentStationIndex = -1;
 
+            // 2. 停止本地音乐 
+            const bgm = document.getElementById('bgm-player');
+            bgm.pause();
+            // bgm.currentTime = 0; // 如果你想保留播放进度，这行可以注释掉
+
+            // 3. UI 状态复位
             document.querySelectorAll('.station-btn').forEach(b => b.classList.remove('active-station'));
             updateRadioStatus("OFFLINE", false);
+
+            // 4. 让按钮变回灰色
             const cutBtn = document.getElementById("cut-signal-btn");
             if (cutBtn) {
                 cutBtn.style.background = "#333";
@@ -1385,7 +1647,12 @@
         }
 
         function setRadioVolume(val) {
-            radioPlayer.volume = val / 100;
+            const v = val / 100;
+            // 1. 控制电台音量
+            radioPlayer.volume = v;
+            // 2. 控制本地音乐音量 
+            const bgm = document.getElementById('bgm-player');
+            if (bgm) bgm.volume = v;
         }
 
         function updateRadioStatus(text, isActive) {
