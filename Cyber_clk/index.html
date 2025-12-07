@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>25:00 | SYSTEM READY</title>
+    <title>30:00 | SYSTEM READY</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         /* === CYBERPUNK 2077 VISUAL IDENTITY === */
@@ -612,7 +612,7 @@
 
         <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
             <div class="timer-wrapper">
-                <div class="timer-display" id="timer">25:00</div>
+                <div class="timer-display" id="timer">30:00</div>
                 <div class="status-badge" id="status-badge">READY TO BREACH</div>
             </div>
 
@@ -659,16 +659,42 @@
         <div class="panel-header">
             <span class="panel-title">SYSTEM CONFIG</span>
         </div>
-        <div style="margin-top:20px;">
+
+        <div style="margin-top:20px; border-bottom: 1px dashed #333; padding-bottom: 20px;">
             <label style="color:var(--cp-blue); font-size:12px; display:block; margin-bottom:10px;">入侵时长 (MIN)</label>
-            <input type="number" class="cyber-input" id="cfg-work" value="25">
+            <input type="number" class="cyber-input" id="cfg-work" value="30">
             <label style="color:var(--cp-blue); font-size:12px; display:block; margin-bottom:10px;">冷却时长 (MIN)</label>
             <input type="number" class="cyber-input" id="cfg-break" value="5">
             <button class="glitch-btn" onclick="saveSettings()" style="font-size:16px; margin-top:20px;">保存配置</button>
-            <button class="purge-btn" onclick="CyberDB.deleteDB()">⚠️ 重置数据库 (修复卡死)</button>
+            <button class="purge-btn" onclick="CyberDB.deleteDB()" style="margin-top:10px; width:100%;">⚠️ 重置数据库
+                (修复卡死)</button>
         </div>
-    </div>
 
+        <div class="system-section" style="margin-top: 20px;">
+            <h3 style="font-size:14px; color:var(--cp-yellow); margin-bottom:10px;">// MISSION TEMPLATES</h3>
+
+            <div id="mission-template-list"
+                style="max-height: 200px; overflow-y: auto; padding-right: 5px; margin-bottom:15px;">
+                <div style="color:#666; font-size:10px;">LOADING...</div>
+            </div>
+
+            <div style="padding-top: 10px; border-top: 1px dashed #333;">
+                <input type="text" id="new-mission-name" placeholder="任务名 (BREACH TARGET)" class="cyber-input"
+                    style="width: 100%; margin-bottom: 5px; box-sizing: border-box;">
+                <div style="display: flex; gap: 5px;">
+                    <input type="number" id="new-mission-minutes" placeholder="分钟" class="cyber-input"
+                        style="width: 50%;">
+                    <input type="number" id="new-mission-seconds" placeholder="秒" class="cyber-input"
+                        style="width: 50%;">
+                </div>
+                <button class="glitch-btn" onclick="addMissionTemplate()"
+                    style="width: 100%; margin-top: 5px; font-size: 12px; border: 1px dashed var(--cp-blue); color: var(--cp-blue); background: transparent;">
+                    + ADD TEMPLATE
+                </button>
+            </div>
+        </div>
+
+    </div>
     <div class="modal-overlay" id="pause-modal">
         <div class="modal-box">
             <h2 style="color:var(--cp-red); margin-top:0;">⚠️ 暂停警告</h2>
@@ -785,7 +811,7 @@
             </div>
         </div>
     </div>
-    </div>
+
 
     <audio id="bgm-player" loop></audio>
 
@@ -920,24 +946,39 @@
             active: false,
             paused: false,
             mode: 'work',
-            timeLeft: 25 * 60,
+            timeLeft: 30 * 60,
             endTime: 0,
             pauseEndTime: 0,
-            totalTime: 25 * 60,
+            totalTime: 30 * 60,
             currentTask: '',
             hasPausedInSession: false,
             tempRating: 3
         };
 
-        let config = { work: 25, break: 5 };
+        let config = { work: 30, break: 5 };
 
         // ==========================================
         // 1. INITIALIZATION & EVENTS
         // ==========================================
         window.onload = async () => {
-            initThree();
+            // 1. 加载所有本地数据
+            renderLocalAudio();
+            renderLocalBg();
+
+            // === 在这里调用 ===
+            loadMissionTemplates();
+            // ================
+
+            // 2. 加载用户设置
+            const savedCfg = localStorage.getItem('cp_config');
+            if (savedCfg) config = JSON.parse(savedCfg);
+            document.getElementById('cfg-work').value = config.work;
+            document.getElementById('cfg-break').value = config.break;
+
+            // 3. 渲染成就
             renderAchievements();
 
+            // 4. 渲染本地数据
             renderLocalAudio();
             renderLocalBg();
 
@@ -952,10 +993,7 @@
                 }
             });
 
-            const savedCfg = localStorage.getItem('cp_config');
-            if (savedCfg) config = JSON.parse(savedCfg);
-            document.getElementById('cfg-work').value = config.work;
-            document.getElementById('cfg-break').value = config.break;
+
 
             // 初始化时立即更新一下标题
             updateTimerDisplay();
@@ -971,15 +1009,34 @@
             };
         };
 
+        // 确保 loadMissionTemplates 在页面加载时被调用
+        document.addEventListener('DOMContentLoaded', loadMissionTemplates);
+        // 页面初始化时也需要重新加载
+        resetUI();
+
+
         // ==========================================
         // 2. CORE TIMER LOGIC (WORKER DRIVEN)
         // ==========================================
         function handleMainAction() {
+            // 情况 1: 计时器正在运行
             if (appState.active) {
-                if (confirm('警告：强行中止连接会导致数据丢失（任务失败）。确认？')) {
-                    failTask('主动放弃');
+                if (appState.mode === 'break') {
+                    // === 新增：休息模式下，点击直接跳过 ===
+                    if (confirm('>> SKIP PROTOCOL: 确认结束休息并准备下一次入侵？')) {
+                        timerWorker.postMessage('stop');
+                        appState.mode = 'work'; // 切换回工作模式
+                        resetUI(); // 重置界面
+                    }
+                } else {
+                    // === 原有逻辑：工作模式下，点击是放弃任务 ===
+                    if (confirm('警告：强行中止连接会导致数据丢失（任务失败）。确认？')) {
+                        failTask('主动放弃');
+                    }
                 }
-            } else {
+            }
+            // 情况 2: 计时器未运行（准备开始）
+            else {
                 if (appState.mode === 'work' && !document.getElementById('task-input').value.trim()) {
                     alert('错误：必须指定任务目标');
                     return;
@@ -988,29 +1045,203 @@
             }
         }
 
+        // === 任务模板 (LocalStorage 版 - 已修复时间加载问题) ===
+        let missionTemplates = [];
+
+        function loadMissionTemplates() {
+            const data = localStorage.getItem('cyberMissionTemplates');
+            if (data) {
+                missionTemplates = JSON.parse(data);
+            } else {
+                // 如果本地没有数据，加载默认模板
+                missionTemplates = [
+                    { name: "DATA HEIST (Standard)", time: 30, seconds: 0 },
+                    { name: "SHORT HACK (Quick)", time: 10, seconds: 0 },
+                    { name: "CRITICAL BREACH (Deep)", time: 50, seconds: 0 }
+                ];
+                saveMissionTemplates(); // 把默认的存进去
+            }
+            renderMissionTemplates();
+        }
+
+        function saveMissionTemplates() {
+            localStorage.setItem('cyberMissionTemplates', JSON.stringify(missionTemplates));
+        }
+
+        function renderMissionTemplates() {
+            const container = document.getElementById('mission-template-list');
+            container.innerHTML = '';
+
+            if (missionTemplates.length === 0) {
+                container.innerHTML = '<div style="color:#666; font-size:10px;">NO TEMPLATES.</div>';
+                return;
+            }
+
+            missionTemplates.forEach((item, index) => {
+                const totalSeconds = (item.time * 60) + (item.seconds || 0);
+                // 辅助格式化时间
+                const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+                const s = (totalSeconds % 60).toString().padStart(2, '0');
+                const displayTime = `${m}:${s}`;
+
+                const row = document.createElement('div');
+                row.style.cssText = "display:flex; justify-content:space-between; margin-bottom:5px; align-items:center; background:rgba(255,255,255,0.05); padding:5px;";
+
+                // 任务名点击直接应用
+                const infoSpan = document.createElement('span');
+                infoSpan.innerText = `${item.name} (${displayTime})`;
+                infoSpan.style.cssText = "cursor:pointer; font-size:12px; color:var(--cp-blue); overflow:hidden; white-space:nowrap; text-overflow:ellipsis; max-width:140px;";
+                infoSpan.onclick = () => applyTemplate(item.name, item.time, item.seconds);
+
+                const actionContainer = document.createElement('div');
+                actionContainer.style.cssText = "display:flex; gap: 5px;";
+
+                // 删除按钮
+                const delBtn = document.createElement('span');
+                delBtn.innerText = "✕";
+                delBtn.style.cssText = "cursor:pointer; color:var(--cp-red); padding:0 5px; font-weight:bold; font-size: 14px;";
+                delBtn.onclick = (e) => {
+                    e.stopPropagation(); // 防止触发应用
+                    deleteMissionTemplate(index);
+                };
+
+                const applyBtn = document.createElement('span');
+                applyBtn.innerText = "LOAD";
+                applyBtn.style.cssText = "cursor:pointer; color:var(--cp-yellow); font-size: 10px; border: 1px solid var(--cp-yellow); padding: 1px 3px;";
+                applyBtn.onclick = () => applyTemplate(item.name, item.time, item.seconds);
+
+                actionContainer.appendChild(applyBtn);
+                actionContainer.appendChild(delBtn);
+                row.appendChild(infoSpan);
+                row.appendChild(actionContainer);
+                container.appendChild(row);
+            });
+        }
+
+        function addMissionTemplate() {
+            const nameInput = document.getElementById('new-mission-name');
+            const minInput = document.getElementById('new-mission-minutes');
+            const secInput = document.getElementById('new-mission-seconds');
+
+            const name = nameInput.value.trim();
+            let minutes = parseInt(minInput.value) || 0;
+            let seconds = parseInt(secInput.value) || 0;
+
+            if (name === "" || (minutes === 0 && seconds === 0)) {
+                alert(">> ERROR: 输入无效"); return;
+            }
+
+            // 进位逻辑
+            if (seconds >= 60) {
+                minutes += Math.floor(seconds / 60);
+                seconds = seconds % 60;
+            }
+
+            missionTemplates.push({ name, time: minutes, seconds });
+            saveMissionTemplates();
+            renderMissionTemplates();
+
+            // 清空输入
+            nameInput.value = ''; minInput.value = ''; secInput.value = '';
+        }
+
+        function deleteMissionTemplate(index) {
+            if (confirm(">> DELETE CONFIRM: 确认删除该模板?")) {
+                missionTemplates.splice(index, 1);
+                saveMissionTemplates();
+                renderMissionTemplates();
+            }
+        }
+
+        // === 核心修复：应用模板 ===
+        function applyTemplate(name, minutes, seconds = 0) {
+            // 1. 安全检查
+            if (appState.active) {
+                alert(">> SYSTEM BUSY: 正在执行任务，无法加载新配置。");
+                return;
+            }
+
+            const totalSeconds = (minutes * 60) + (seconds || 0);
+
+            // 2. 更新全局配置 (这样下次重置时也会记住这个时间)
+            config.work = totalSeconds / 60; // 这里的 config.work 可能变成小数，没关系，程序支持
+
+            // 3. 更新当前界面状态 (关键！)
+            appState.mode = 'work'; // 强制切回工作模式
+            appState.timeLeft = totalSeconds;
+            appState.totalTime = totalSeconds;
+
+            // 4. 更新 DOM
+            document.getElementById('task-input').value = name;
+
+            // 5. 强制刷新大时钟显示 (这就是之前缺少的步骤)
+            updateTimerDisplay();
+            document.getElementById('progress-bar').style.width = '0%'; // 重置进度条
+
+            // 6. 更新设置面板里的输入框 (保持同步)
+            document.getElementById('cfg-work').value = Math.floor(totalSeconds / 60);
+
+            // 7. 视觉反馈
+            const badge = document.getElementById('status-badge');
+            badge.innerText = "TEMPLATE LOADED";
+            badge.style.color = "var(--cp-yellow)";
+
+            // 3秒后变回 READY
+            setTimeout(() => {
+                if (!appState.active) {
+                    badge.innerText = "READY TO BREACH";
+                    badge.style.color = "var(--cp-blue)";
+                }
+            }, 3000);
+        }
+
+        // === 计时器 ===
         function startTimer() {
             appState.active = true;
             appState.paused = false;
             appState.hasPausedInSession = false;
-            appState.currentTask = document.getElementById('task-input').value;
+            // 如果是工作模式，记录任务名；如果是休息模式，任务名设为 SYSTEM COOLING
+            appState.currentTask = appState.mode === 'work'
+                ? document.getElementById('task-input').value
+                : "SYSTEM COOLING";
+
             appState.totalTime = (appState.mode === 'work' ? config.work : config.break) * 60;
 
             appState.endTime = Date.now() + appState.totalTime * 1000;
             appState.timeLeft = appState.totalTime;
 
             document.getElementById('task-input').disabled = true;
-            document.getElementById('action-btn').innerText = "中止入侵";
-            document.getElementById('action-btn').style.background = "var(--cp-red)";
-            document.getElementById('pause-btn').style.display = appState.mode === 'work' ? 'block' : 'none';
 
-            const badge = document.getElementById('status-badge');
-            badge.innerText = appState.mode === 'work' ? "BREACH IN PROGRESS" : "SYSTEM REBOOTING";
-            badge.style.color = appState.mode === 'work' ? "var(--cp-red)" : "var(--cp-blue)";
+            // === 修改点开始：根据模式改变按钮外观 ===
+            const actionBtn = document.getElementById('action-btn');
+            const statusBadge = document.getElementById('status-badge');
 
-            updateTimerDisplay(); // 立即更新标题
+            if (appState.mode === 'work') {
+                // 工作模式：红色按钮，显示中止
+                actionBtn.innerText = "中止入侵 (ABORT)";
+                actionBtn.style.background = "var(--cp-red)";
+                actionBtn.style.color = "black";
 
+                statusBadge.innerText = "BREACH IN PROGRESS";
+                statusBadge.style.color = "var(--cp-red)";
+                document.getElementById('pause-btn').style.display = 'block';
+            } else {
+                // 休息模式：绿色按钮，显示跳过
+                actionBtn.innerText = ">> 跳过休息 (SKIP) >>";
+                actionBtn.style.background = "var(--cp-green)";
+                actionBtn.style.color = "black";
+
+                statusBadge.innerText = "SYSTEM REBOOTING";
+                statusBadge.style.color = "var(--cp-blue)";
+                document.getElementById('pause-btn').style.display = 'none'; // 休息时不需要暂停功能
+            }
+            // === 修改点结束 ===
+
+            updateTimerDisplay();
+
+            // 只有工作模式才自动播放BGM，休息模式不强制播放（或者你可以根据喜好修改）
             const bgm = document.getElementById('bgm-player');
-            if (bgm.src) bgm.play().catch(() => { });
+            if (bgm.src && appState.mode === 'work') bgm.play().catch(() => { });
 
             timerWorker.postMessage('start');
         }
@@ -1167,7 +1398,7 @@
             if (confirm("⚠️ 严重警告 ⚠️\n\n您正在执行数据库清洗操作。\n这将永久删除所有历史记录、成就和统计数据。\n\n是否继续？")) {
                 localStorage.removeItem('cp_logs');
                 localStorage.removeItem('cp_achievements');
-
+                localStorage.removeItem('cyberMissionTemplates');
                 // 关键：同时刷新两个视图
                 renderStats();
                 renderAchievements();
@@ -1568,7 +1799,7 @@
         }
 
         function saveSettings() {
-            config.work = parseInt(document.getElementById('cfg-work').value) || 25;
+            config.work = parseInt(document.getElementById('cfg-work').value) || 30;
             config.break = parseInt(document.getElementById('cfg-break').value) || 5;
             localStorage.setItem('cp_config', JSON.stringify(config));
             closeAllPanels();

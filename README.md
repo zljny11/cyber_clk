@@ -4,16 +4,18 @@
 
 > "Wake the f**k up, Samurai. We have a task to burn."
 
-![License](https://img.shields.io/badge/license-MIT-yellow.svg) ![Version](https://img.shields.io/badge/style-Cyberpunk_2077-ff003c.svg) ![HTML5](https://img.shields.io/badge/html5-%23E34F26.svg?logo=html5&logoColor=white) ![CSS3](https://img.shields.io/badge/css3-%231572B6.svg?logo=css3&logoColor=white) ![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?logo=javascript&logoColor=%23F7DF1E) ![Threejs](https://img.shields.io/badge/threejs-black?logo=three.js&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-yellow.svg) ![Version](https://img.shields.io/badge/style-Cyberpunk_2077-ff003c.svg) ![HTML5](https://img.shields.io/badge/html5-%23E34F26.svg?logo=html5&logoColor=white) ![CSS3](https://img.shields.io/badge/css3-%231572B6.svg?logo=css3&logoColor=white) ![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?logo=javascript&logoColor=%23F7DF1E) ![Three.js](https://img.shields.io/badge/threejs-black?logo=three.js&logoColor=white) ![IndexedDB](https://img.shields.io/badge/indexeddb-black?logo=indexeddb&logoColor=white)
 
 <a name="chinese"></a>
 
 ### 简介
 因为嫌弃市面上的番茄钟太无聊，所以我搓了这个***赛博朋克风专注时钟***
 
-界面致敬《赛博朋克 2077》，结合three.js的3D模型，带防摸鱼机制，而且用了 Web Worker 多线程，就算你切到后台去工作，倒计时也不会卡顿!
+界面致敬《赛博朋克 2077》，结合three.js的3D模型制作了动态粒子背景，支持不限次数定制化任务，带防摸鱼机制，而且用了 Web Worker 多线程，就算你切到后台去工作，倒计时也不会卡顿!
 
 这款时钟内置精美赛博风壁纸和专属学习用电台，风格各异，支持音量调节，也欢迎你自己上传任何你喜欢的音乐和壁纸！
+
+（更新：使用了indexedDB数据库，这样上传的图片和bgm当前可自动保存在本地，下次打开时会自动加载）
 
 
 ###  Screenshots / 界面预览
@@ -53,6 +55,8 @@
 所有数据（日志、设置、成就）都只存在你自己的浏览器里（localStorage），无需联网，我也看不到!!!!!
 
 - ***自定义***
+
+提供三个不同时间的模版，你也可以随意创建属于你自己的时间模版，都会在数据库中长期保存！
 
 觉得默认背景不帅？支持上传你自己的壁纸和BGM!!
 
